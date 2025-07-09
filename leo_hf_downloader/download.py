@@ -1,0 +1,103 @@
+from pathlib import Path
+from huggingface_hub import list_repo_files, get_token
+
+
+repo_id = "HuggingFaceFW/fineweb-2"
+repo_type = "dataset"
+revision = "main"
+output_dir = "" # put your output directory here
+ssh_username = "" # put your username here
+
+hf_token = get_token()
+if hf_token:
+    print("Using HuggingFace token")
+else:
+    print("No HuggingFace token found")
+
+# Get list of all files in the repository
+files = list_repo_files(repo_id=repo_id, repo_type=repo_type, revision=revision, token=hf_token)
+
+# Save files list to list.txt
+list_file_path = Path(__file__).parent / "list.txt" 
+with open(list_file_path, "w") as f:
+    f.write("\n".join(files))
+
+print(f"Saved {len(files)} files to {list_file_path}")
+
+# Dynamically construct the HTTP URL
+if repo_type == "dataset":
+    http_url = f"https://huggingface.co/datasets/{repo_id}/resolve/{revision}/"
+else:
+    http_url = f"https://huggingface.co/{repo_id}/resolve/{revision}/"
+
+print(f"HTTP URL: {http_url}")
+
+# Construct the rclone command
+rclone_base_args = [
+    "rclone", "copy",
+    "--no-traverse",
+    "--files-from", str(list_file_path.absolute()),
+    "--transfers", "8",
+    "--checkers", "8",
+    "--progress",
+    "--retries", "15",
+    "--retries-sleep", "5s",
+    "--low-level-retries", "15",
+    "--size-only",
+    "--http-no-head",
+    "--multi-thread-streams", "2",
+    "--multi-thread-cutoff", "200M",
+    "--buffer-size", "16M",
+    "--tpslimit", "3",
+    "--timeout", "600s",
+    "--contimeout", "120s",
+    "--expect-continue-timeout", "10s",
+    "--disable-http2",
+    "--user-agent", "rclone/leonardo-hpc",
+    "--no-check-certificate"
+]
+
+# Add authentication header if token is available
+if hf_token:
+    rclone_base_args.extend([
+        "--header", f"Authorization: Bearer {hf_token}"
+    ])
+
+# Add HTTP URL and destination
+rclone_base_args.extend([
+    "--http-url", http_url,
+    ":http:",
+    output_dir
+])
+
+# SSH command for datamover. Only allow hostbased authentication.
+ssh_command = [
+    "ssh", "-xt", 
+    "-o", "PreferredAuthentications=hostbased",
+    "-o", "PasswordAuthentication=no",
+    "-o", "PubkeyAuthentication=no",
+    "-o", "GSSAPIAuthentication=no",
+    f"{ssh_username}@data.leonardo.cineca.it",
+    f"""'{" ".join(f'"{arg}"' if " " in arg else arg for arg in rclone_base_args)}'"""
+]
+
+print("Command to execute:")
+print(" ".join(ssh_command))
+print()
+
+# Example output when running the command:
+# 2025/07/09 15:02:33 NOTICE: Config file "/home/.rclone.conf" not found - using defaults
+# 2025/07/09 15:02:39 NOTICE: Time may be set wrong - time from "cdn-lfs-us-1.hf.co" is 306h34m3.435898448s different from this computer
+# Transferred:       38.997 GiB / 38.997 GiB, 100%, 1.262 GiB/s, ETA 0s
+# Checks:               350 / 350, 100%
+# Transferred:           19 / 9241, 0%
+# Elapsed time:        39.0s
+# Transferring:
+#  *         data/arb_Arab/train/000_00001.parquet:  0% /off, 198.771Mi/s, -
+#  *         data/arb_Arab/train/000_00004.parquet:  0% /off, 172.021Mi/s, -
+#  *         data/arb_Arab/train/001_00000.parquet:  0% /off, 211.299Mi/s, -
+#  *         data/arb_Arab/train/001_00001.parquet:  0% /off, 210.342Mi/s, -
+#  *         data/arb_Arab/train/001_00002.parquet:  0% /off, 213.998Mi/s, -
+#  *         data/arb_Arab/train/001_00003.parquet:  0% /off, 0/s, -
+#  *         data/arb_Arab/train/001_00004.parquet: transferring
+#  *         data/arb_Arab/train/002_00000.parquet: transferring
