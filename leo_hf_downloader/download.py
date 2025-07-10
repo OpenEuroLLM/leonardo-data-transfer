@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from huggingface_hub import list_repo_files, get_token
 
@@ -5,8 +6,12 @@ from huggingface_hub import list_repo_files, get_token
 repo_id = "HuggingFaceFW/fineweb-2"
 repo_type = "dataset"
 revision = "main"
-output_dir = "" # put your output directory here
-ssh_username = "" # put your username here
+output_dir = "/leonardo_work/AIFAC_L01_028/datasets/HuggingFaceFW/fineweb-2" # put your output directory here
+ssh_username = os.getenv("USER") # automatically get current username
+
+# Ensure output directory exists
+Path(output_dir).mkdir(parents=True, exist_ok=True)
+print(f"Output directory: {output_dir}")
 
 hf_token = get_token()
 if hf_token:
@@ -17,8 +22,8 @@ else:
 # Get list of all files in the repository
 files = list_repo_files(repo_id=repo_id, repo_type=repo_type, revision=revision, token=hf_token)
 
-# Save files list to list.txt
-list_file_path = Path(__file__).parent / "list.txt" 
+# Save files list to file_list.txt
+list_file_path = Path(output_dir) / "file_list.txt" 
 with open(list_file_path, "w") as f:
     f.write("\n".join(files))
 
@@ -35,6 +40,7 @@ print(f"HTTP URL: {http_url}")
 # Construct the rclone command
 rclone_base_args = [
     "rclone", "copy",
+    "-vv",
     "--no-traverse",
     "--files-from", str(list_file_path.absolute()),
     "--transfers", "8",
@@ -47,14 +53,16 @@ rclone_base_args = [
     "--http-no-head",
     "--multi-thread-streams", "2",
     "--multi-thread-cutoff", "200M",
-    "--buffer-size", "16M",
+    "--buffer-size", "64M",
     "--tpslimit", "3",
     "--timeout", "600s",
-    "--contimeout", "120s",
+    "--contimeout", "60s",
     "--expect-continue-timeout", "10s",
     "--disable-http2",
     "--user-agent", "rclone/leonardo-hpc",
-    "--no-check-certificate"
+    "--no-check-certificate",
+    "--use-mmap",
+    "--no-update-modtime",
 ]
 
 # Add authentication header if token is available
