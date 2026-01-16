@@ -3,10 +3,10 @@ from pathlib import Path
 from huggingface_hub import list_repo_files, get_token
 
 
-repo_id = "HuggingFaceFW/fineweb-2"
+repo_id = "nvidia/Nemotron-CC-v2"
 repo_type = "dataset"
 revision = "main"
-output_dir = "/leonardo_work/AIFAC_L01_028/datasets/HuggingFaceFW/fineweb-2" # put your output directory here
+output_dir = "/leonardo_work/AIFAC_L01_028/datasets/Nemotron-CC-v2" # put your output directory here
 ssh_username = os.getenv("USER") # automatically get current username
 
 # Ensure output directory exists
@@ -41,19 +41,19 @@ print(f"HTTP URL: {http_url}")
 rclone_base_args = [
     "rclone", "copy",
     "-vv",
-    "--no-traverse",
     "--files-from", str(list_file_path.absolute()),
-    "--transfers", "8",
-    "--checkers", "8",
+    "--no-traverse",
+    "--transfers", "16",
+    "--checkers", "16",
     "--progress",
     "--retries", "15",
     "--retries-sleep", "5s",
     "--low-level-retries", "15",
     "--size-only",
     "--http-no-head",
-    "--multi-thread-streams", "2",
+    "--multi-thread-streams", "3",
     "--multi-thread-cutoff", "200M",
-    "--buffer-size", "64M",
+    "--buffer-size", "128M",
     "--tpslimit", "3",
     "--timeout", "600s",
     "--contimeout", "60s",

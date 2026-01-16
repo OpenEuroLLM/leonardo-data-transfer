@@ -1,0 +1,14 @@
+[workspace]
+authors = ["maxidl <maximilian@ellmind.com>"]
+channels = ["conda-forge"]
+name = "leo_hf_downloader"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.12.*"
+
+[pypi-dependencies]
+huggingface-hub = ">=0.33.2, <0.34"
