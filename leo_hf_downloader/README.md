@@ -2,6 +2,28 @@
 
 Tools for high-speed data transfer using Leonardo's datamover nodes with rclone.
 
+
+## Download a list of urls
+Create a file with a list of file paths, relative to shared http-url prefix. For example, to grab one file from swedish and finnish HPLT3 each:
+```
+# /leonardo_work/AIFAC_L01_028/datasets/HPLT3/file_list.txt 
+fin_Latn/10_1.jsonl.zst
+swe_Latn/10_1.jsonl.zst
+```
+Their shared http-url prefix is `https://data.hplt-project.org/three/sorted/`.
+
+Command to download on leonardo datamover:
+```
+ssh -xt -o PreferredAuthentications=hostbased -o PasswordAuthentication=no -o PubkeyAuthentication=no -o GSSAPIAuthentication=no midahl00@data.leonardo.cineca.it 'rclone copy -vv --files-from /leonardo_work/AIFAC_L01_028/datasets/HPLT3/file_list.txt --no-traverse --transfers 16 --checkers 16 --progress --retries 15 --retries-sleep 5s --low-level-retries 15 --size-only --http-no-head --multi-thread-streams 3 --multi-thread-cutoff 200M --buffer-size 128M --tpslimit 3 --timeout 600s --contimeout 60s --expect-continue-timeout 10s --disable-http2 --user-agent rclone/leonardo-hpc --no-check-certificate --use-mmap --no-update-modtime --http-url https://data.hplt-project.org/three/sorted/ :http: /leonardo_work/AIFAC_L01_028/datasets/HPLT3'
+```
+This will populate `/leonardo_work/AIFAC_L01_028/datasets/HPLT3`:
+```
+file_list.txt
+fin_Latn/
+swe_Latn/
+```
+
+
 ## download.py - Download from HuggingFace
 
 Creates a command for downloading a HuggingFace repo via the datamover node.
